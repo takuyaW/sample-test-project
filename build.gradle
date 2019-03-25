@@ -1,0 +1,77 @@
+apply plugin: 'java'
+apply plugin: 'jacoco'
+apply plugin: 'findbugs'
+
+repositories {
+    mavenCentral()
+}
+
+/**
+ * JUnit
+ */
+dependencies {
+    testCompile 'junit:junit:4.12'
+}
+
+/**
+ * Merge JUnit Output Reports
+ */
+configurations {
+    antJUnit
+}
+
+dependencies {
+    antJUnit 'org.apache.ant:ant-junit:1.9.7'
+}
+
+task mergeJUnitReports {
+    ext {
+        resultsDir = file("$buildDir/test-results/test")
+        targetDir = file("$buildDir/test-results/merged")
+    }
+
+    doLast {
+        ant.taskdef(name: 'junitreport',
+                    classname: 'org.apache.tools.ant.taskdefs.optional.junit.XMLResultAggregator',
+                    classpath: configurations.antJUnit.asPath)
+
+        ant.junitreport(todir: resultsDir) {
+            fileset(dir: resultsDir, includes: 'TEST-*.xml')
+            report(todir: targetDir, format: 'frames')
+        }
+    }
+}
+
+/**
+ * Code Coverage: JaCoCo
+ */
+if (project.plugins.findPlugin('jacoco')) {
+    jacoco {
+        toolVersion = '0.8.1'
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+    }
+}
+
+/**
+ * Find Bugs 
+ */
+task findbugs(type: FindBugs) {
+    ignoreFailures = true
+    classes = fileTree('build/classes/')
+    source = fileTree('src/main/java/')
+    classpath = files()
+    effort = 'max'
+    reportLevel = "low"
+}
+
+tasks.withType(FindBugs) {
+    reports {
+        xml.enabled = false
+        html.enabled = true
+    }
+}
